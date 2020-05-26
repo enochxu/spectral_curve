@@ -1,0 +1,5 @@
+#Virtual Environment
+project_env/
+
+#Visual Studio Code
+.vscode/
