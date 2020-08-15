@@ -7,10 +7,35 @@ sigma = 900
 thresh_val = 40
 
 
+# let user choose file, returns image
+def open_image():
+    root = Tk()
+    root.fileName = filedialog.askopenfilename(
+        initialdir="./samples",
+        title="Select an Image",
+        filetypes=((".jpg", "*.jpg"), (".png", "*.png"), ("all files", "*.*")),
+    )
+    fname = root.fileName
+    image = cv2.imread(fname)
+    return image
+
+
 class Sample:
     def __init__(self, name):
         self.name = name
         self.image = open_image()
+        self.linearized = ic.gamma_expand(self.image)
+
+    def resize(self, scale):
+        width = int(self.image.shape[1] * scale)
+        height = int(self.image.shape[0] * scale)
+        dim = (width, height)
+        self.image = cv2.resize(self.image, dim, interpolation=cv2.INTER_AREA)
+        self.linearized = cv2.resize(self.linearized, dim, interpolation=cv2.INTER_AREA)
+
+    def display(self):
+        cv2.imshow(self.name, self.linearized)
+        cv2.waitKey(0)
 
 
 def change_sigma(new_sigma):
@@ -30,19 +55,6 @@ def resize(image, scale):
     return cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
 
 
-# let user choose file, returns image
-def open_image():
-    root = Tk()
-    root.fileName = filedialog.askopenfilename(
-        initialdir="./samples",
-        title="Select an Image",
-        filetypes=((".jpg", "*.jpg"), (".png", "*.png"), ("all files", "*.*")),
-    )
-    fname = root.fileName
-    image = cv2.imread(fname)
-    return image
-
-
 def crop_image(image):
     r = cv2.selectROI(image)
     cropped = image[int(r[1]) : int(r[1] + r[3]), int(r[0]) : int(r[0] + r[2])]
@@ -50,12 +62,11 @@ def crop_image(image):
 
 
 def main():
-    image = open_image()
-    linearized_image = ic.gamma_expand(image) * 2
-    # resize image
-    image = resize(image, 0.3)
-    linearized_image = resize(linearized_image, 0.3)
+    sample = Sample('sample 1')
+    sample.resize(0.3)
+
     # learn to auto-adjust brightness
+    linearized_image = sample.linearized
 
     global sigma
     cv2.namedWindow("De-Vignette", cv2.WINDOW_AUTOSIZE)
@@ -69,20 +80,24 @@ def main():
             break
 
     crop = crop_image(devignetted)
-    crop = resize(crop, 2)
-
+    print(crop.shape)
     thresh = ic.thresholding(crop)
 
+    contour_mask = np.zeros(crop.shape[:2], np.uint8)
     kernel = np.ones((15, 15), np.uint8)
     closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
     contours, hierarchy = cv2.findContours(
         closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
     )
 
-    cv2.drawContours(crop, contours, -1, (0, 255, 0), 2)
+    cv2.drawContours(contour_mask, contours, -1, 255, 2)
+
+    # avg color in BGR not RGB
+    avgColor = cv2.mean(crop, contour_mask)
     print(contours)
+    print(avgColor)
     cv2.imshow("Thresholding", thresh)
-    cv2.imshow("Contours", crop)
+    cv2.imshow("Contours", contour_mask)
     cv2.waitKey(0)
 
 
