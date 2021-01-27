@@ -35,3 +35,15 @@ def thresholding(image):
     blurred = cv2.GaussianBlur(gray, (9, 9), 0)
     retval, th = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return th
+
+
+def contour_mask(thresh):
+    contour_mask = np.zeros(thresh.shape, np.uint8)
+    kernel = np.ones((15, 15), np.uint8)
+
+    closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    contours, hierarchy = cv2.findContours(
+        closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+    )
+    cv2.drawContours(contour_mask, contours, -1, 255, 2)
+    return contour_mask

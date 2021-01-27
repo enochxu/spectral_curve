@@ -8,9 +8,10 @@ flake8 = "*"
 black = "*"
 
 [packages]
-numpy = "*"
+numpy = "==1.19.3"
 opencv-python = "*"
 jupyter = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.8"
